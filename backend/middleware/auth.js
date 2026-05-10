@@ -1,14 +1,13 @@
 const pool = require('../config/db');
+const { HTTP_STATUS } = require('../config/constants');
+const { sendError } = require('../utils/apiResponse');
 const { verifyToken } = require('../utils/token');
 
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication token is required'
-    });
+    return sendError(res, HTTP_STATUS.UNAUTHORIZED, 'Authentication token is required');
   }
 
   const token = authHeader.split(' ')[1];
@@ -17,10 +16,7 @@ async function requireAuth(req, res, next) {
   try {
     decoded = verifyToken(token);
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid or expired authentication token'
-    });
+    return sendError(res, HTTP_STATUS.UNAUTHORIZED, 'Invalid or expired authentication token');
   }
 
   try {
@@ -30,19 +26,13 @@ async function requireAuth(req, res, next) {
     );
 
     if (users.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found'
-      });
+      return sendError(res, HTTP_STATUS.UNAUTHORIZED, 'User not found');
     }
 
     req.user = users[0];
     return next();
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Server error during authentication'
-    });
+    return sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Server error during authentication');
   }
 }
 

@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('express-validator');
 const activityController = require('../controllers/activityController');
 const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get(
     query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50')
   ],
   validate,
-  activityController.searchActivitiesGlobally
+  asyncHandler(activityController.searchActivitiesGlobally)
 );
 
 module.exports = router;

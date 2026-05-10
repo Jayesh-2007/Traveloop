@@ -7,6 +7,7 @@ const stopController = require('../controllers/stopController');
 const tripController = require('../controllers/tripController');
 const requireAuth = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
@@ -140,56 +141,56 @@ const tripBodyValidation = [
 
 router.use(requireAuth);
 
-router.post('/', tripBodyValidation, validate, tripController.createTrip);
+router.post('/', tripBodyValidation, validate, asyncHandler(tripController.createTrip));
 
-router.get('/', tripController.getTrips);
+router.get('/', asyncHandler(tripController.getTrips));
 
 router.post(
   '/:id/stops',
   [...tripIdValidation, ...stopBodyValidation],
   validate,
-  stopController.addStop
+  asyncHandler(stopController.addStop)
 );
 
-router.get('/:id/stops', tripIdValidation, validate, stopController.getStops);
+router.get('/:id/stops', tripIdValidation, validate, asyncHandler(stopController.getStops));
 
 router.put(
   '/:id/stops/reorder',
   [...tripIdValidation, ...reorderStopsValidation],
   validate,
-  stopController.reorderStops
+  asyncHandler(stopController.reorderStops)
 );
 
 router.post(
   '/:id/stops/:stopId/activities',
   [...tripIdValidation, ...stopIdValidation, ...assignActivityValidation],
   validate,
-  stopController.assignActivityToStop
+  asyncHandler(stopController.assignActivityToStop)
 );
 
 router.put(
   '/:id/stops/:stopId',
   [...tripIdValidation, ...stopIdValidation, ...stopBodyValidation],
   validate,
-  stopController.updateStop
+  asyncHandler(stopController.updateStop)
 );
 
 router.delete(
   '/:id/stops/:stopId',
   [...tripIdValidation, ...stopIdValidation],
   validate,
-  stopController.deleteStop
+  asyncHandler(stopController.deleteStop)
 );
 
-router.get('/:id/itinerary', tripIdValidation, validate, itineraryController.getItinerary);
+router.get('/:id/itinerary', tripIdValidation, validate, asyncHandler(itineraryController.getItinerary));
 
-router.get('/:id/export', tripIdValidation, validate, tripController.exportTrip);
+router.get('/:id/export', tripIdValidation, validate, asyncHandler(tripController.exportTrip));
 
-router.post('/:id/share', tripIdValidation, validate, shareController.enableSharing);
+router.post('/:id/share', tripIdValidation, validate, asyncHandler(shareController.enableSharing));
 
-router.delete('/:id/share', tripIdValidation, validate, shareController.disableSharing);
+router.delete('/:id/share', tripIdValidation, validate, asyncHandler(shareController.disableSharing));
 
-router.get('/:id/budget', tripIdValidation, validate, budgetController.getTripBudget);
+router.get('/:id/budget', tripIdValidation, validate, asyncHandler(budgetController.getTripBudget));
 
 router.post(
   '/:id/budget-cap',
@@ -209,25 +210,25 @@ router.post(
       .withMessage('Currency code must contain only letters')
   ],
   validate,
-  budgetController.setBudgetCap
+  asyncHandler(budgetController.setBudgetCap)
 );
 
 router.get(
   '/:id/budget-status',
   tripIdValidation,
   validate,
-  budgetController.getBudgetStatus
+  asyncHandler(budgetController.getBudgetStatus)
 );
 
-router.get('/:id', tripIdValidation, validate, tripController.getTripById);
+router.get('/:id', tripIdValidation, validate, asyncHandler(tripController.getTripById));
 
 router.put(
   '/:id',
   [...tripIdValidation, ...tripBodyValidation],
   validate,
-  tripController.updateTrip
+  asyncHandler(tripController.updateTrip)
 );
 
-router.delete('/:id', tripIdValidation, validate, tripController.deleteTrip);
+router.delete('/:id', tripIdValidation, validate, asyncHandler(tripController.deleteTrip));
 
 module.exports = router;

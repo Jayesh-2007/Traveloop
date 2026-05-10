@@ -3,6 +3,7 @@ const { param, query } = require('express-validator');
 const activityController = require('../controllers/activityController');
 const cityController = require('../controllers/cityController');
 const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ router.get(
     limitValidation
   ],
   validate,
-  cityController.getCities
+  asyncHandler(cityController.getCities)
 );
 
 router.get(
@@ -33,14 +34,14 @@ router.get(
     limitValidation
   ],
   validate,
-  activityController.getCityActivities
+  asyncHandler(activityController.getCityActivities)
 );
 
 router.get(
   '/:id',
   [param('id').isInt({ min: 1 }).withMessage('City id must be a positive integer')],
   validate,
-  cityController.getCityById
+  asyncHandler(cityController.getCityById)
 );
 
 module.exports = router;

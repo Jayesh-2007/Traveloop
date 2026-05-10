@@ -3,6 +3,7 @@ const { param } = require('express-validator');
 const shareController = require('../controllers/shareController');
 const requireAuth = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
@@ -13,14 +14,14 @@ const tokenValidation = [
     .withMessage('Share token is invalid')
 ];
 
-router.get('/:token', tokenValidation, validate, shareController.getPublicItinerary);
+router.get('/:token', tokenValidation, validate, asyncHandler(shareController.getPublicItinerary));
 
 router.post(
   '/:token/copy',
   tokenValidation,
   validate,
   requireAuth,
-  shareController.copyPublicTrip
+  asyncHandler(shareController.copyPublicTrip)
 );
 
 module.exports = router;
