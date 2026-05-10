@@ -1,7 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Bell, Compass, PlusCircle, Search, Sparkles } from 'lucide-react';
+import { Bell, Compass, LogOut, PlusCircle, Search, Sparkles } from 'lucide-react';
+import useAuth from '../../hooks/useAuth.js';
+
+function getInitials(name = 'Traveler') {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'TR';
+}
 
 function Navbar() {
+  const { logout, user } = useAuth();
+
   return (
     <header className="sticky top-0 z-30 border-b border-white/80 bg-white/85 shadow-sm shadow-slate-200/60 backdrop-blur-xl">
       <nav className="flex h-20 items-center justify-between gap-4 px-5 sm:px-7 lg:px-10">
@@ -59,13 +72,23 @@ function Navbar() {
             className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white">
-              TR
+              {getInitials(user?.name)}
             </span>
             <span className="hidden text-left leading-tight sm:block">
-              <span className="block text-sm font-semibold text-slate-900">Traveler</span>
+              <span className="block max-w-32 truncate text-sm font-semibold text-slate-900">
+                {user?.name || 'Traveler'}
+              </span>
               <span className="block text-xs font-medium text-slate-500">Profile</span>
             </span>
           </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            aria-label="Log out"
+          >
+            <LogOut size={18} aria-hidden="true" />
+          </button>
         </div>
       </nav>
     </header>
