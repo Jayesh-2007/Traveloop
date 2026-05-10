@@ -1,12 +1,11 @@
-function Card({ children, className = '', title }) {
+function Card({ children, className = '' }) {
   return (
     <section
       className={[
-        'rounded-lg border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6',
+        'rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-sm',
         className,
       ].join(' ')}
     >
-      {title && <h2 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>}
       {children}
     </section>
   );

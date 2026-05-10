@@ -7,11 +7,13 @@ function PublicItinerary() {
   return (
     <main className="min-h-screen bg-[var(--color-surface)] px-4 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto max-w-3xl">
-        <Card title="Shared Itinerary">
-          <p className="text-sm text-[var(--color-text-secondary)]">Public share token: {token}</p>
+        <Card>
+          <p className="text-sm font-medium text-[var(--color-text-secondary)]">Shared Itinerary</p>
+          <h1 className="mt-2 text-2xl font-semibold">Public trip share</h1>
+          <p className="mt-3 text-sm text-[var(--color-text-secondary)]">Share token: {token}</p>
           <Link
             to="/"
-            className="mt-6 inline-flex text-sm font-semibold text-[var(--color-primary)] hover:underline"
+            className="mt-6 inline-flex text-sm font-medium text-[var(--color-primary)] hover:underline"
           >
             Back to Traveloop
           </Link>

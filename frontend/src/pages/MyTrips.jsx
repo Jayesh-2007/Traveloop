@@ -2,8 +2,9 @@ import Card from '../components/shared/Card.jsx';
 
 function MyTrips() {
   return (
-    <Card title="My Trips">
-      <p className="text-sm text-[var(--color-text-secondary)]">Saved trip list will live here.</p>
+    <Card>
+      <p className="text-sm font-medium text-[var(--color-text-secondary)]">My Trips</p>
+      <h1 className="mt-2 text-2xl font-semibold">Your saved trips</h1>
     </Card>
   );
 }

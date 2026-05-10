@@ -5,8 +5,9 @@ function ItineraryView() {
   const { id } = useParams();
 
   return (
-    <Card title="Itinerary View">
-      <p className="text-sm text-[var(--color-text-secondary)]">Viewing itinerary for trip {id}.</p>
+    <Card>
+      <p className="text-sm font-medium text-[var(--color-text-secondary)]">Itinerary</p>
+      <h1 className="mt-2 text-2xl font-semibold">Viewing trip {id}</h1>
     </Card>
   );
 }
