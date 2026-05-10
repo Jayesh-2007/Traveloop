@@ -4,12 +4,14 @@ import Sidebar from '../components/shared/Sidebar.jsx';
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)]">
-      <Navbar />
-      <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <Sidebar />
-        <main className="min-w-0 flex-1">
-          <Outlet />
+    <div className="min-h-screen bg-slate-100 text-slate-950">
+      <Sidebar />
+      <div className="min-h-screen lg:pl-72">
+        <Navbar />
+        <main className="h-[calc(100vh-5rem)] overflow-y-auto px-4 py-6 sm:px-7 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
