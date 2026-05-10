@@ -81,3 +81,59 @@ export async function updateTrip(id, formData) {
 export async function deleteTrip(id) {
   await api.delete(`/trips/${id}`);
 }
+
+export async function fetchCities(params = {}) {
+  const response = await api.get('/cities', { params });
+  return response.data.data.cities;
+}
+
+export async function fetchActivitiesForCity(cityId, params = {}) {
+  const response = await api.get(`/cities/${cityId}/activities`, { params });
+  return response.data.data.activities;
+}
+
+export async function fetchItinerary(tripId) {
+  const response = await api.get(`/trips/${tripId}/itinerary`);
+  return response.data.data;
+}
+
+function toStopPayload(formData) {
+  return {
+    city_id: Number(formData.cityId),
+    start_date: formData.startDate,
+    end_date: formData.endDate,
+    stop_order: Number(formData.stopOrder),
+  };
+}
+
+export async function createStop(tripId, formData) {
+  const response = await api.post(`/trips/${tripId}/stops`, toStopPayload(formData));
+  return response.data.data;
+}
+
+export async function updateStop(tripId, stopId, formData) {
+  const response = await api.put(`/trips/${tripId}/stops/${stopId}`, toStopPayload(formData));
+  return response.data.data;
+}
+
+export async function deleteStop(tripId, stopId) {
+  await api.delete(`/trips/${tripId}/stops/${stopId}`);
+}
+
+export async function reorderStops(tripId, stopIds) {
+  const response = await api.put(`/trips/${tripId}/stops/reorder`, {
+    stop_ids: stopIds.map(Number),
+  });
+  return response.data.data.stops;
+}
+
+export async function assignActivityToStop(tripId, stopId, formData) {
+  const payload = {
+    activity_id: Number(formData.activityId),
+    scheduled_date: formData.scheduledDate || null,
+    start_time: formData.startTime || null,
+  };
+
+  const response = await api.post(`/trips/${tripId}/stops/${stopId}/activities`, payload);
+  return response.data.data.activity;
+}
