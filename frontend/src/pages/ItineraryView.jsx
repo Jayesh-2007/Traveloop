@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   Save,
+  Search,
   Share2,
   Sparkles,
   StickyNote,
@@ -37,11 +38,15 @@ import {
   createStop,
   deleteStop,
   fetchActivitiesForCity,
+  fetchBudgetStatus,
   fetchCities,
   fetchItinerary,
   fetchTrip,
+  fetchTripBudget,
   getApiErrorMessage,
   reorderStops,
+  searchActivities,
+  setBudgetCap,
   updateStop,
 } from '../utils/tripApi.js';
 
@@ -66,10 +71,26 @@ const initialStopForm = {
   stopOrder: '1',
 };
 
-function formatCurrency(value) {
+const initialCityFilters = {
+  search: '',
+  region: '',
+  sort: 'activities',
+};
+
+const initialActivityFilters = {
+  search: '',
+  category: '',
+};
+
+const initialBudgetCapForm = {
+  amount: '',
+  currencyCode: 'USD',
+};
+
+function formatCurrency(value, currency = 'USD') {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -126,12 +147,49 @@ function getActivitySelection(selection = {}) {
   };
 }
 
+function getActivityFilters(filters = {}) {
+  return {
+    search: filters.search || '',
+    category: filters.category || '',
+  };
+}
+
+function getBudgetCategories(budgetData) {
+  if (!budgetData?.totals) {
+    return defaultBudget;
+  }
+
+  return {
+    hotel: Number(budgetData.totals.stay_total || 0),
+    food: Number(budgetData.totals.meals_total || 0),
+    transport: Number(budgetData.totals.transport_total || 0),
+    activities: Number(budgetData.totals.activities_total || 0),
+  };
+}
+
+function getBudgetStatusLabel(status) {
+  if (!status?.budget_cap) {
+    return 'No cap set';
+  }
+
+  if (status.is_over_budget) {
+    return 'Over budget';
+  }
+
+  return 'Within budget';
+}
+
 function ItineraryView() {
   const { id } = useParams();
   const [trip, setTrip] = useState(null);
   const [cities, setCities] = useState([]);
+  const [cityFilters, setCityFilters] = useState(initialCityFilters);
   const [activityOptionsByStopId, setActivityOptionsByStopId] = useState({});
+  const [activityFiltersByStopId, setActivityFiltersByStopId] = useState({});
   const [activitySelections, setActivitySelections] = useState({});
+  const [budgetData, setBudgetData] = useState(null);
+  const [budgetStatus, setBudgetStatus] = useState(null);
+  const [budgetCapForm, setBudgetCapForm] = useState(initialBudgetCapForm);
   const [stopForm, setStopForm] = useState(initialStopForm);
   const [stopErrors, setStopErrors] = useState({});
   const [editStopId, setEditStopId] = useState(null);
@@ -139,10 +197,13 @@ function ItineraryView() {
   const [editErrors, setEditErrors] = useState({});
   const [error, setError] = useState('');
   const [manageError, setManageError] = useState('');
+  const [budgetError, setBudgetError] = useState('');
   const [isLoadingTrip, setIsLoadingTrip] = useState(true);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [isLoadingBudget, setIsLoadingBudget] = useState(false);
   const [isSavingStop, setIsSavingStop] = useState(false);
   const [isUpdatingStop, setIsUpdatingStop] = useState(false);
+  const [isSavingBudgetCap, setIsSavingBudgetCap] = useState(false);
   const [deletingStopId, setDeletingStopId] = useState(null);
   const [reorderingStopId, setReorderingStopId] = useState(null);
   const [loadingActivitiesStopId, setLoadingActivitiesStopId] = useState(null);
@@ -180,11 +241,16 @@ function ItineraryView() {
       }
     }
 
-    async function loadCities() {
+    async function loadCities(filters = initialCityFilters) {
       setIsLoadingCities(true);
 
       try {
-        const fetchedCities = await fetchCities({ limit: 50, sort: 'activities' });
+        const fetchedCities = await fetchCities({
+          limit: 50,
+          search: filters.search || undefined,
+          region: filters.region || undefined,
+          sort: filters.sort || undefined,
+        });
 
         if (isMounted) {
           setCities(fetchedCities);
@@ -200,8 +266,43 @@ function ItineraryView() {
       }
     }
 
+    async function loadBudget() {
+      setIsLoadingBudget(true);
+      setBudgetError('');
+
+      try {
+        const [fetchedBudget, fetchedStatus] = await Promise.all([
+          fetchTripBudget(id),
+          fetchBudgetStatus(id),
+        ]);
+
+        if (isMounted) {
+          const cap = fetchedBudget.budget_cap || fetchedStatus.budget_cap;
+
+          setBudgetData(fetchedBudget);
+          setBudgetStatus(fetchedStatus);
+
+          if (cap) {
+            setBudgetCapForm({
+              amount: String(cap.amount),
+              currencyCode: cap.currency_code || 'USD',
+            });
+          }
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setBudgetError(getApiErrorMessage(requestError, 'Unable to load budget analytics.'));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingBudget(false);
+        }
+      }
+    }
+
     loadTrip();
     loadCities();
+    loadBudget();
 
     return () => {
       isMounted = false;
@@ -225,6 +326,29 @@ function ItineraryView() {
     }));
 
     return itinerary;
+  }
+
+  async function refreshBudget() {
+    try {
+      const [fetchedBudget, fetchedStatus] = await Promise.all([
+        fetchTripBudget(id),
+        fetchBudgetStatus(id),
+      ]);
+      const cap = fetchedBudget.budget_cap || fetchedStatus.budget_cap;
+
+      setBudgetData(fetchedBudget);
+      setBudgetStatus(fetchedStatus);
+      setBudgetError('');
+
+      if (cap) {
+        setBudgetCapForm({
+          amount: String(cap.amount),
+          currencyCode: cap.currency_code || 'USD',
+        });
+      }
+    } catch (requestError) {
+      setBudgetError(getApiErrorMessage(requestError, 'Unable to refresh budget analytics.'));
+    }
   }
 
   function validateStopForm(formData, maxOrder) {
@@ -284,6 +408,55 @@ function ItineraryView() {
     });
   }
 
+  function updateCityFilter(event) {
+    const { name, value } = event.target;
+
+    setCityFilters((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  async function handleSearchCities(event) {
+    event.preventDefault();
+    setManageError('');
+    setIsLoadingCities(true);
+
+    try {
+      const fetchedCities = await fetchCities({
+        limit: 50,
+        search: cityFilters.search || undefined,
+        region: cityFilters.region || undefined,
+        sort: cityFilters.sort || undefined,
+      });
+
+      setCities(fetchedCities);
+    } catch (requestError) {
+      setManageError(getApiErrorMessage(requestError, 'Unable to search cities.'));
+    } finally {
+      setIsLoadingCities(false);
+    }
+  }
+
+  function updateActivityFilter(stopId, field, value) {
+    setActivityFiltersByStopId((current) => ({
+      ...current,
+      [stopId]: {
+        ...getActivityFilters(current[stopId]),
+        [field]: value,
+      },
+    }));
+  }
+
+  function updateBudgetCapField(event) {
+    const { name, value } = event.target;
+
+    setBudgetCapForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
   async function handleCreateStop(event) {
     event.preventDefault();
     setManageError('');
@@ -301,6 +474,7 @@ function ItineraryView() {
     try {
       await createStop(id, stopForm);
       await refreshItinerary();
+      await refreshBudget();
       setStopForm({ ...initialStopForm, stopOrder: String(stops.length + 2) });
       toast.success('Stop added.');
     } catch (requestError) {
@@ -344,6 +518,7 @@ function ItineraryView() {
     try {
       await updateStop(id, editStopId, editStopForm);
       await refreshItinerary();
+      await refreshBudget();
       cancelEditingStop();
       toast.success('Stop updated.');
     } catch (requestError) {
@@ -366,6 +541,7 @@ function ItineraryView() {
     try {
       await deleteStop(id, stop.id);
       await refreshItinerary();
+      await refreshBudget();
       toast.success('Stop deleted.');
     } catch (requestError) {
       setManageError(getApiErrorMessage(requestError, 'Unable to delete stop.'));
@@ -391,6 +567,7 @@ function ItineraryView() {
     try {
       await reorderStops(id, nextStopIds);
       await refreshItinerary();
+      await refreshBudget();
       toast.success('Stop order updated.');
     } catch (requestError) {
       setManageError(getApiErrorMessage(requestError, 'Unable to reorder stops.'));
@@ -399,16 +576,26 @@ function ItineraryView() {
     }
   }
 
-  async function loadActivitiesForStop(stop) {
-    if (activityOptionsByStopId[stop.id]) {
+  async function loadActivitiesForStop(stop, forceRefresh = false) {
+    if (activityOptionsByStopId[stop.id] && !forceRefresh) {
       return;
     }
 
+    const filters = getActivityFilters(activityFiltersByStopId[stop.id]);
+    const cityId = stop.city_id || stop.city?.id;
     setManageError('');
     setLoadingActivitiesStopId(stop.id);
 
     try {
-      const activities = await fetchActivitiesForCity(stop.city_id || stop.city?.id, { limit: 50 });
+      const activities = filters.search || filters.category
+        ? await searchActivities({
+          limit: 50,
+          city_id: cityId,
+          search: filters.search || undefined,
+          category: filters.category || undefined,
+        })
+        : await fetchActivitiesForCity(cityId, { limit: 50 });
+
       setActivityOptionsByStopId((current) => ({
         ...current,
         [stop.id]: activities,
@@ -418,6 +605,11 @@ function ItineraryView() {
     } finally {
       setLoadingActivitiesStopId(null);
     }
+  }
+
+  async function handleSearchActivities(event, stop) {
+    event.preventDefault();
+    await loadActivitiesForStop(stop, true);
   }
 
   function updateActivitySelection(stopId, field, value) {
@@ -446,6 +638,7 @@ function ItineraryView() {
     try {
       await assignActivityToStop(id, stop.id, selection);
       await refreshItinerary();
+      await refreshBudget();
       setActivitySelections((current) => ({
         ...current,
         [stop.id]: getActivitySelection(),
@@ -455,6 +648,28 @@ function ItineraryView() {
       setManageError(getApiErrorMessage(requestError, 'Unable to assign activity.'));
     } finally {
       setAssigningActivityStopId(null);
+    }
+  }
+
+  async function handleSaveBudgetCap(event) {
+    event.preventDefault();
+    setBudgetError('');
+
+    if (!budgetCapForm.amount || Number(budgetCapForm.amount) < 0) {
+      setBudgetError('Budget cap must be 0 or greater.');
+      return;
+    }
+
+    setIsSavingBudgetCap(true);
+
+    try {
+      await setBudgetCap(id, budgetCapForm);
+      await refreshBudget();
+      toast.success('Budget cap saved.');
+    } catch (requestError) {
+      setBudgetError(getApiErrorMessage(requestError, 'Unable to save budget cap.'));
+    } finally {
+      setIsSavingBudgetCap(false);
     }
   }
 
@@ -482,8 +697,14 @@ function ItineraryView() {
 
   const stops = trip.itineraryStops || [];
   const duration = getTripDuration(trip.startDate, trip.endDate);
-  const budget = { ...defaultBudget, ...(trip.budget || {}) };
-  const budgetTotal = getTripBudgetTotal(budget);
+  const budget = getBudgetCategories(budgetData);
+  const budgetTotal = budgetData?.totals?.total_estimated_cost ?? getTripBudgetTotal(budget);
+  const budgetCurrency = budgetData?.totals?.currency_code || budgetStatus?.budget_cap?.currency_code || 'USD';
+  const highestCostDay = budgetData?.highest_cost_day;
+  const budgetCap = budgetData?.budget_cap || budgetStatus?.budget_cap;
+  const budgetRemaining = budgetData?.budget_status?.remaining_budget ?? budgetStatus?.remaining_budget;
+  const isOverBudget = budgetData?.budget_status?.is_over_budget ?? budgetStatus?.is_over_budget;
+  const percentageUsed = budgetData?.budget_status?.percentage_used ?? budgetStatus?.percentage_used;
   const totals = trip.itineraryTotals || {};
 
   function handleShareTrip() {
@@ -597,6 +818,71 @@ function ItineraryView() {
             <h2 className="text-lg font-semibold text-slate-950">Stops and activities</h2>
           </div>
 
+          <form onSubmit={handleSearchCities} className="border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto] lg:items-end">
+              <div>
+                <label htmlFor="citySearch" className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  City search
+                </label>
+                <input
+                  id="citySearch"
+                  name="search"
+                  type="search"
+                  value={cityFilters.search}
+                  onChange={updateCityFilter}
+                  placeholder="Search cities or countries"
+                  disabled={isLoadingCities}
+                  className="traveloop-input mt-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="cityRegion" className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Region
+                </label>
+                <select
+                  id="cityRegion"
+                  name="region"
+                  value={cityFilters.region}
+                  onChange={updateCityFilter}
+                  disabled={isLoadingCities}
+                  className="traveloop-input mt-2"
+                >
+                  <option value="">All regions</option>
+                  <option value="Europe">Europe</option>
+                  <option value="East Asia">East Asia</option>
+                  <option value="South Asia">South Asia</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="citySort" className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Sort
+                </label>
+                <select
+                  id="citySort"
+                  name="sort"
+                  value={cityFilters.sort}
+                  onChange={updateCityFilter}
+                  disabled={isLoadingCities}
+                  className="traveloop-input mt-2"
+                >
+                  <option value="activities">Most activities</option>
+                  <option value="name">City name</option>
+                  <option value="country">Country</option>
+                </select>
+              </div>
+              <Button type="submit" disabled={isLoadingCities} className="w-full lg:w-auto">
+                {isLoadingCities ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <Search size={17} aria-hidden="true" />}
+                Search
+              </Button>
+            </div>
+            {!isLoadingCities && cities.length === 0 && (
+              <p className="mt-3 text-sm font-medium text-slate-500">
+                No cities match the current filters.
+              </p>
+            )}
+          </form>
+
           <form onSubmit={handleCreateStop} className="border-b border-slate-200 bg-slate-50 px-5 py-5 sm:px-6">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_96px_auto] lg:items-end">
               <div>
@@ -696,6 +982,7 @@ function ItineraryView() {
                 const activities = stop.activities || [];
                 const isEditing = editStopId === stop.id;
                 const activityOptions = activityOptionsByStopId[stop.id] || [];
+                const activityFilters = getActivityFilters(activityFiltersByStopId[stop.id]);
                 const activitySelection = getActivitySelection(activitySelections[stop.id]);
                 const activityCost = getStopActivityCost(stop);
                 const activityDuration = getStopActivityDuration(stop);
@@ -712,7 +999,7 @@ function ItineraryView() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                            Stop {stop.stop_order} · {formatDateRange(stop.start_date, stop.end_date)}
+                            Stop {stop.stop_order} - {formatDateRange(stop.start_date, stop.end_date)}
                           </p>
                           <h3 className="mt-1 text-lg font-semibold text-slate-950">{getStopTitle(stop)}</h3>
                         </div>
@@ -860,7 +1147,7 @@ function ItineraryView() {
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         <div className="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                           <span className="font-semibold">Activities: </span>
-                          {activities.length} planned · {formatCurrency(activityCost)}
+                          {activities.length} planned - {formatCurrency(activityCost, budgetCurrency)}
                         </div>
                         <div className="rounded-2xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
                           <span className="font-semibold">Duration: </span>
@@ -869,7 +1156,48 @@ function ItineraryView() {
                       </div>
 
                       <form onSubmit={(event) => handleAssignActivity(event, stop)} className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.75fr)_minmax(0,0.6fr)_auto] lg:items-end">
+                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_170px_auto] lg:items-end">
+                          <div>
+                            <label htmlFor={`activity-search-${stop.id}`} className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              Activity search
+                            </label>
+                            <input
+                              id={`activity-search-${stop.id}`}
+                              type="search"
+                              value={activityFilters.search}
+                              onChange={(event) => updateActivityFilter(stop.id, 'search', event.target.value)}
+                              placeholder="Search activities"
+                              disabled={loadingActivitiesStopId === stop.id}
+                              className="traveloop-input mt-2"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`activity-category-${stop.id}`} className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              Category
+                            </label>
+                            <input
+                              id={`activity-category-${stop.id}`}
+                              type="text"
+                              value={activityFilters.category}
+                              onChange={(event) => updateActivityFilter(stop.id, 'category', event.target.value)}
+                              placeholder="Food, Museum"
+                              disabled={loadingActivitiesStopId === stop.id}
+                              className="traveloop-input mt-2"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={(event) => handleSearchActivities(event, stop)}
+                            disabled={loadingActivitiesStopId === stop.id}
+                            className="w-full lg:w-auto"
+                          >
+                            {loadingActivitiesStopId === stop.id ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <Search size={17} aria-hidden="true" />}
+                            Search
+                          </Button>
+                        </div>
+
+                        <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.75fr)_minmax(0,0.6fr)_auto] lg:items-end">
                           <div>
                             <label htmlFor={`activity-${stop.id}`} className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                               Activity
@@ -891,6 +1219,11 @@ function ItineraryView() {
                                 </option>
                               ))}
                             </select>
+                            {!loadingActivitiesStopId && activityOptionsByStopId[stop.id] && activityOptions.length === 0 && (
+                              <p className="mt-2 text-xs font-semibold text-slate-500">
+                                No activities match these filters.
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label htmlFor={`scheduled-${stop.id}`} className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -946,8 +1279,68 @@ function ItineraryView() {
 
             <div className="mt-6 rounded-2xl bg-slate-950 p-5 text-white">
               <p className="text-sm font-medium text-slate-300">Total estimated budget</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">{formatCurrency(budgetTotal)}</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">
+                {isLoadingBudget ? 'Loading...' : formatCurrency(budgetTotal, budgetCurrency)}
+              </p>
+              <p className="mt-3 text-sm font-medium text-slate-300">
+                {getBudgetStatusLabel({ budget_cap: budgetCap, is_over_budget: isOverBudget })}
+              </p>
             </div>
+
+            {budgetError && <div className="mt-5"><ErrorMessage message={budgetError} /></div>}
+
+            <form onSubmit={handleSaveBudgetCap} className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_110px_auto] sm:items-end">
+                <div>
+                  <label htmlFor="budgetCapAmount" className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Budget cap
+                  </label>
+                  <input
+                    id="budgetCapAmount"
+                    name="amount"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={budgetCapForm.amount}
+                    onChange={updateBudgetCapField}
+                    disabled={isSavingBudgetCap}
+                    placeholder="2500"
+                    className="traveloop-input mt-2"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="budgetCurrency" className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Currency
+                  </label>
+                  <input
+                    id="budgetCurrency"
+                    name="currencyCode"
+                    type="text"
+                    maxLength={3}
+                    value={budgetCapForm.currencyCode}
+                    onChange={updateBudgetCapField}
+                    disabled={isSavingBudgetCap}
+                    className="traveloop-input mt-2 uppercase"
+                  />
+                </div>
+                <Button type="submit" disabled={isSavingBudgetCap}>
+                  {isSavingBudgetCap ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <Save size={17} aria-hidden="true" />}
+                  Save
+                </Button>
+              </div>
+            </form>
+
+            {budgetCap && (
+              <div className={['mt-5 rounded-2xl p-4 text-sm leading-6', isOverBudget ? 'bg-red-50 text-red-800' : 'bg-emerald-50 text-emerald-900'].join(' ')}>
+                <span className="font-semibold">
+                  {isOverBudget ? 'Over budget: ' : 'Remaining budget: '}
+                </span>
+                {formatCurrency(Math.abs(Number(budgetRemaining || 0)), budgetCurrency)}
+                {percentageUsed !== null && percentageUsed !== undefined && (
+                  <span> - {Math.round(Number(percentageUsed))}% used</span>
+                )}
+              </div>
+            )}
 
             <div className="mt-6 space-y-5">
               {budgetConfig.map(({ key, label, tone }) => {
@@ -957,7 +1350,7 @@ function ItineraryView() {
                   <div key={key}>
                     <div className="flex items-center justify-between gap-4 text-sm">
                       <span className="font-medium text-slate-600">{label}</span>
-                      <span className="font-semibold text-slate-950">{formatCurrency(value)}</span>
+                      <span className="font-semibold text-slate-950">{formatCurrency(value, budgetCurrency)}</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                       <div
@@ -972,6 +1365,31 @@ function ItineraryView() {
                 );
               })}
             </div>
+
+            {budgetData && (
+              <div className="mt-6 grid gap-3">
+                <div className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                  <span className="font-semibold text-slate-900">Average daily spend: </span>
+                  {formatCurrency(budgetData.totals.average_daily_spend || 0, budgetCurrency)}
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                  <span className="font-semibold text-slate-900">Highest cost day: </span>
+                  {highestCostDay ? `${highestCostDay.date} - ${formatCurrency(highestCostDay.total, budgetCurrency)}` : 'Not available yet'}
+                </div>
+                {budgetData.stop_breakdown?.length > 0 ? (
+                  budgetData.stop_breakdown.slice(0, 3).map((stopBudget) => (
+                    <div key={stopBudget.stop_id} className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                      <span className="font-semibold text-slate-900">{stopBudget.city_name}: </span>
+                      {formatCurrency(stopBudget.estimated.total, budgetCurrency)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
+                    Add stops to generate budget analytics.
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           <Card>
@@ -988,7 +1406,7 @@ function ItineraryView() {
               {[
                 `Stops: ${totals.stop_count || 0}`,
                 `Activities: ${totals.activity_count || 0}`,
-                `Activity cost: ${formatCurrency(totals.estimated_activities_cost || 0)}`,
+                `Activity cost: ${formatCurrency(totals.estimated_activities_cost || 0, budgetCurrency)}`,
               ].map((item) => (
                 <div key={item} className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
                   {item}

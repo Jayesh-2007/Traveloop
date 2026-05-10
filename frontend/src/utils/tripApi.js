@@ -87,8 +87,18 @@ export async function fetchCities(params = {}) {
   return response.data.data.cities;
 }
 
+export async function fetchCity(cityId) {
+  const response = await api.get(`/cities/${cityId}`);
+  return response.data.data.city;
+}
+
 export async function fetchActivitiesForCity(cityId, params = {}) {
   const response = await api.get(`/cities/${cityId}/activities`, { params });
+  return response.data.data.activities;
+}
+
+export async function searchActivities(params = {}) {
+  const response = await api.get('/activities/search', { params });
   return response.data.data.activities;
 }
 
@@ -136,4 +146,22 @@ export async function assignActivityToStop(tripId, stopId, formData) {
 
   const response = await api.post(`/trips/${tripId}/stops/${stopId}/activities`, payload);
   return response.data.data.activity;
+}
+
+export async function fetchTripBudget(tripId) {
+  const response = await api.get(`/trips/${tripId}/budget`);
+  return response.data.data;
+}
+
+export async function setBudgetCap(tripId, formData) {
+  const response = await api.post(`/trips/${tripId}/budget-cap`, {
+    amount: Number(formData.amount),
+    currency_code: formData.currencyCode || 'USD',
+  });
+  return response.data.data;
+}
+
+export async function fetchBudgetStatus(tripId) {
+  const response = await api.get(`/trips/${tripId}/budget-status`);
+  return response.data.data;
 }
