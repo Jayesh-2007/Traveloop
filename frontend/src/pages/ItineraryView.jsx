@@ -37,6 +37,9 @@ import {
   assignActivityToStop,
   createStop,
   deleteStop,
+  disableTripSharing,
+  enableTripSharing,
+  exportTrip,
   fetchActivitiesForCity,
   fetchBudgetStatus,
   fetchCities,
@@ -209,6 +212,7 @@ function ItineraryView() {
   const [loadingActivitiesStopId, setLoadingActivitiesStopId] = useState(null);
   const [assigningActivityStopId, setAssigningActivityStopId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -706,20 +710,95 @@ function ItineraryView() {
   const isOverBudget = budgetData?.budget_status?.is_over_budget ?? budgetStatus?.is_over_budget;
   const percentageUsed = budgetData?.budget_status?.percentage_used ?? budgetStatus?.percentage_used;
   const totals = trip.itineraryTotals || {};
+  const sharePath = trip.shareToken ? `/share/${trip.shareToken}` : '';
 
-  function handleShareTrip() {
-    toast.success('Share link copied.');
-    console.log('Share URL:', `/share/${trip.id}`);
+  async function copyShareUrl(url) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      return;
+    }
+
+    window.prompt('Copy this share link:', url);
   }
 
-  function handleExportPdf() {
+  async function handleShareTrip() {
+    setManageError('');
+    setIsSharing(true);
+
+    try {
+      let nextShareToken = trip.shareToken;
+
+      if (!nextShareToken) {
+        const shareData = await enableTripSharing(trip.id);
+        nextShareToken = shareData.share_token;
+
+        setTrip((currentTrip) => ({
+          ...currentTrip,
+          shareToken: nextShareToken,
+          visibility: 'public',
+          isPublic: true,
+        }));
+      }
+
+      const nextShareUrl = `${window.location.origin}/share/${nextShareToken}`;
+      await copyShareUrl(nextShareUrl);
+      toast.success('Share link ready and copied.');
+    } catch (requestError) {
+      setManageError(getApiErrorMessage(requestError, 'Unable to enable sharing.'));
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  async function handleDisableSharing() {
+    const shouldDisable = window.confirm('Disable this public share link?');
+
+    if (!shouldDisable) {
+      return;
+    }
+
+    setManageError('');
+    setIsSharing(true);
+
+    try {
+      await disableTripSharing(trip.id);
+      setTrip((currentTrip) => ({
+        ...currentTrip,
+        shareToken: null,
+        visibility: 'private',
+        isPublic: false,
+      }));
+      toast.success('Sharing disabled.');
+    } catch (requestError) {
+      setManageError(getApiErrorMessage(requestError, 'Unable to disable sharing.'));
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  async function handleExportPdf() {
     setIsExporting(true);
 
-    setTimeout(() => {
+    try {
+      const exportData = await exportTrip(trip.id);
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = url;
+      link.download = `traveloop-trip-${trip.id}-export.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Trip export downloaded.');
+    } catch (requestError) {
+      setManageError(getApiErrorMessage(requestError, 'Unable to export trip.'));
+    } finally {
       setIsExporting(false);
-      toast.success('PDF export ready.');
-      console.log('PDF export:', trip);
-    }, 1500);
+    }
   }
 
   return (
@@ -747,15 +826,35 @@ function ItineraryView() {
               type="button"
               variant="secondary"
               onClick={handleShareTrip}
+              disabled={isSharing}
               className="border-white/20 bg-white/95 text-slate-900 hover:bg-white"
             >
-              <Share2 size={17} aria-hidden="true" />
-              Share Trip
+              {isSharing ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <Share2 size={17} aria-hidden="true" />}
+              {trip.shareToken ? 'Copy Share Link' : 'Enable Sharing'}
             </Button>
-            <Button as={Link} to={`/share/${trip.id}`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
-              <ExternalLink size={17} aria-hidden="true" />
-              Preview Share
-            </Button>
+            {trip.shareToken ? (
+              <Button as={Link} to={sharePath} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
+                <ExternalLink size={17} aria-hidden="true" />
+                Preview Share
+              </Button>
+            ) : (
+              <Button type="button" variant="secondary" disabled className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
+                <ExternalLink size={17} aria-hidden="true" />
+                Preview Share
+              </Button>
+            )}
+            {trip.shareToken && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleDisableSharing}
+                disabled={isSharing}
+                className="border-white/20 bg-white/95 text-slate-900 hover:bg-white"
+              >
+                {isSharing ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <X size={17} aria-hidden="true" />}
+                Disable Share
+              </Button>
+            )}
             <Button as={Link} to={`/trips/${trip.id}/edit`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
               <Pencil size={17} aria-hidden="true" />
               Edit Trip
@@ -775,7 +874,7 @@ function ItineraryView() {
               ) : (
                 <>
                   <Download size={17} aria-hidden="true" />
-                  Export PDF
+                  Export Trip
                 </>
               )}
             </Button>

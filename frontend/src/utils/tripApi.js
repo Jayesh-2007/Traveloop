@@ -165,3 +165,27 @@ export async function fetchBudgetStatus(tripId) {
   const response = await api.get(`/trips/${tripId}/budget-status`);
   return response.data.data;
 }
+
+export async function enableTripSharing(tripId) {
+  const response = await api.post(`/trips/${tripId}/share`);
+  return response.data.data;
+}
+
+export async function disableTripSharing(tripId) {
+  await api.delete(`/trips/${tripId}/share`);
+}
+
+export async function fetchPublicItinerary(token) {
+  const response = await api.get(`/share/${token}`);
+  return response.data.data;
+}
+
+export async function copyPublicTrip(token) {
+  const response = await api.post(`/share/${token}/copy`);
+  return response.data.data;
+}
+
+export async function exportTrip(tripId) {
+  const response = await api.get(`/trips/${tripId}/export`);
+  return response.data.data;
+}
