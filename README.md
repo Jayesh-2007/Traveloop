@@ -138,7 +138,10 @@ Create `backend/.env` from `backend/.env.example`.
 
 ```env
 PORT=5000
+NODE_ENV=development
 LOG_LEVEL=info
+LOG_HEALTH_CHECKS=false
+FRONTEND_URL=http://localhost:5173,http://127.0.0.1:5173
 
 DB_HOST=localhost
 DB_USER=root
@@ -153,8 +156,15 @@ JWT_EXPIRES_IN=7d
 Notes:
 
 - `JWT_SECRET` must be at least 16 characters.
+- `FRONTEND_URL` should match the Vite dev server during local integration.
 - Never commit `backend/.env`.
 - Use `backend/.env.example` for shared setup documentation.
+
+Frontend API env:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+```
 
 ## Database Setup
 
@@ -176,6 +186,12 @@ To reload demo data without manually running SQL:
 
 ```bash
 npm.cmd run db:reseed
+```
+
+To verify MySQL connection and seeded row counts:
+
+```bash
+npm.cmd run db:check
 ```
 
 Demo users:
@@ -265,6 +281,12 @@ GET    /api/share/:token
 POST   /api/share/:token/copy
 ```
 
+### Health Check
+
+```text
+GET    /api/health
+```
+
 ## Project Status
 
 ### Complete
@@ -303,16 +325,43 @@ Suggested judge demo path:
 
 1. Start MySQL.
 2. Reset and seed the backend database.
-3. Start backend with `npm.cmd run dev`.
-4. Start frontend with `npm.cmd run dev`.
-5. Log in with a demo user.
-6. View seeded trips.
-7. Open an itinerary with multiple city stops.
-8. Search cities and activities.
-9. Review budget breakdown and budget cap status.
-10. Enable public sharing for a trip.
-11. Open the public share URL.
-12. Copy/fork the shared trip into another user account.
+3. Verify backend data with `npm.cmd run db:check`.
+4. Start backend with `npm.cmd run dev`.
+5. Open `http://localhost:5000/api/health`.
+6. Start frontend with `npm.cmd run dev`.
+7. Log in with a demo user.
+8. View seeded trips.
+9. Open an itinerary with multiple city stops.
+10. Search cities and activities.
+11. Review budget breakdown and budget cap status.
+12. Enable public sharing for a trip.
+13. Open the public share URL.
+14. Copy/fork the shared trip into another user account.
+
+## Deployment Preparation
+
+Deployment is not implemented yet, but the project is structured for deployment prep.
+
+Frontend:
+
+- Set `VITE_API_BASE_URL` to the deployed backend API URL.
+- Run `npm.cmd run build` from `frontend/`.
+
+Backend:
+
+- Set `NODE_ENV=production`.
+- Set `FRONTEND_URL` to the deployed frontend origin.
+- Use a strong production `JWT_SECRET`.
+- Use production MySQL credentials.
+- Run database schema setup before starting the API.
+- Verify `GET /api/health` after deployment.
+
+Production considerations:
+
+- Do not use demo passwords in production.
+- Do not commit `.env` files.
+- Configure HTTPS and secure environment variables on the hosting platform.
+- Add rate limiting and automated tests before real public use.
 
 ## Team Ownership
 

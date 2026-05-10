@@ -34,7 +34,10 @@ async function resetDatabase() {
     await runSqlFile(connection, 'schema.sql');
     await runSqlFile(connection, 'seed.sql');
 
-    logger.info('database reset complete', { database: dbConfig.database });
+    logger.info('database reset complete', {
+      database: dbConfig.database,
+      next: 'Run npm.cmd run db:check, then npm.cmd run dev'
+    });
   } finally {
     await connection.end();
   }

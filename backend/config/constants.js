@@ -5,6 +5,7 @@ const HTTP_STATUS = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
+  SERVICE_UNAVAILABLE: 503,
   INTERNAL_SERVER_ERROR: 500
 };
 
@@ -17,6 +18,8 @@ const REQUIRED_ENV_KEYS = [
   'JWT_SECRET',
   'JWT_EXPIRES_IN'
 ];
+
+const LOG_LEVELS = ['error', 'warn', 'info', 'debug'];
 
 const SEEDED_TABLES = [
   'budget_caps',
@@ -32,6 +35,7 @@ const SEEDED_TABLES = [
 
 module.exports = {
   HTTP_STATUS,
+  LOG_LEVELS,
   REQUIRED_ENV_KEYS,
   SEEDED_TABLES
 };

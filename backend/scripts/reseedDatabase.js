@@ -36,7 +36,10 @@ async function reseedDatabase() {
 
     await connection.commit();
 
-    logger.info('database reseed complete', { database: dbConfig.database });
+    logger.info('database reseed complete', {
+      database: dbConfig.database,
+      next: 'Run npm.cmd run db:check to confirm demo data'
+    });
   } catch (error) {
     await connection.rollback();
     throw error;

@@ -20,7 +20,10 @@ Required environment variables:
 
 ```env
 PORT=5000
+NODE_ENV=development
 LOG_LEVEL=info
+LOG_HEALTH_CHECKS=false
+FRONTEND_URL=http://localhost:5173,http://127.0.0.1:5173
 
 DB_HOST=localhost
 DB_USER=root
@@ -33,6 +36,8 @@ JWT_EXPIRES_IN=7d
 ```
 
 `JWT_SECRET` must be at least 16 characters.
+
+`FRONTEND_URL` can be a comma-separated list when testing more than one frontend URL.
 
 ## Database
 
@@ -49,6 +54,12 @@ npm.cmd run db:reseed
 ```
 
 Use `db:reset` when the schema changes. Use `db:reseed` when demo data gets messy during testing.
+
+Verify the database connection and seeded row counts:
+
+```bash
+npm.cmd run db:check
+```
 
 Demo users:
 
@@ -75,6 +86,25 @@ Most routes are under:
 
 ```text
 http://localhost:5000/api
+```
+
+Health check:
+
+```text
+GET http://localhost:5000/api/health
+```
+
+Expected healthy response:
+
+```json
+{
+  "success": true,
+  "message": "Traveloop API is healthy",
+  "data": {
+    "status": "ok",
+    "database": "connected"
+  }
+}
 ```
 
 If `http://localhost:5000` returns `Route not found`, the server is still running correctly. Use an API route such as:
@@ -169,6 +199,12 @@ Increase logging during integration:
 LOG_LEVEL=debug
 ```
 
+Health-check requests are hidden from logs by default. To show them:
+
+```env
+LOG_HEALTH_CHECKS=true
+```
+
 Common issues:
 
 - `Authentication token is required`: frontend did not send `Authorization: Bearer <token>`.
@@ -188,3 +224,29 @@ Frontend should read:
 - `errors` for form field validation.
 
 Do not rely on raw MySQL column names unless the API response exposes them.
+
+## Demo Readiness Checklist
+
+Before the final demo:
+
+1. Run `npm.cmd run db:reset`.
+2. Run `npm.cmd run db:check`.
+3. Start backend with `npm.cmd run dev`.
+4. Open `http://localhost:5000/api/health`.
+5. Log in with a demo user.
+6. Confirm `/api/trips`, `/api/cities`, and one `/api/trips/:id/itinerary` call work.
+
+## Deployment Preparation Notes
+
+This backend is ready for deployment preparation, but deployment itself is not configured in this repo.
+
+Production checklist:
+
+- Set `NODE_ENV=production`.
+- Use a strong unique `JWT_SECRET`.
+- Set `FRONTEND_URL` to the deployed frontend origin.
+- Use a managed MySQL database or a secured MySQL server.
+- Run `schema.sql` once before applying demo or production data.
+- Do not use local demo passwords in production.
+- Keep `.env` files out of Git.
+- Confirm `/api/health` returns a healthy response after deploy.
