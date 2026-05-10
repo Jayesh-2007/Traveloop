@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.post(
       .withMessage('Password must be between 8 and 72 characters')
   ],
   validate,
-  authController.register
+  asyncHandler(authController.register)
 );
 
 router.post(
@@ -46,7 +47,7 @@ router.post(
       .withMessage('Password is required')
   ],
   validate,
-  authController.login
+  asyncHandler(authController.login)
 );
 
 module.exports = router;
