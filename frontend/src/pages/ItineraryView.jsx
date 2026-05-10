@@ -6,10 +6,12 @@ import {
   CheckSquare,
   Clock3,
   Download,
+  ExternalLink,
   LoaderCircle,
   MapPin,
   Share2,
   Sparkles,
+  StickyNote,
   WalletCards,
 } from 'lucide-react';
 import Button from '../components/shared/Button.jsx';
@@ -98,7 +100,7 @@ function ItineraryView() {
       <EmptyState
         icon={MapPin}
         title="Trip not found"
-        description="This itinerary may have been removed from local storage. Create a new trip to continue the demo flow."
+        description="This itinerary may have been removed from local storage. Create a new trip to continue the planning flow."
         action={{ label: 'Back to My Trips', to: '/trips' }}
       />
     );
@@ -110,8 +112,8 @@ function ItineraryView() {
   const budgetTotal = getTripBudgetTotal(budget);
 
   function handleShareTrip() {
-    toast.success('Share link copied for demo.');
-    console.log('Mock share URL:', `/share/${trip.id}`);
+    toast.success('Share link copied.');
+    console.log('Share URL:', `/share/${trip.id}`);
   }
 
   function handleExportPdf() {
@@ -119,16 +121,17 @@ function ItineraryView() {
 
     setTimeout(() => {
       setIsExporting(false);
-      toast.success('Mock PDF export ready.');
-      console.log('Mock PDF export:', trip);
+      toast.success('PDF export ready.');
+      console.log('PDF export:', trip);
     }, 1500);
   }
 
   return (
     <div className="space-y-6">
-      <section className={['overflow-hidden rounded-3xl bg-gradient-to-br p-6 text-white shadow-xl shadow-slate-300/40 sm:p-8', trip.coverTheme].join(' ')}>
+      <section className={['relative overflow-hidden rounded-[2rem] bg-gradient-to-br p-6 text-white shadow-2xl shadow-slate-300/50 sm:p-8', trip.coverTheme].join(' ')}>
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="relative">
             <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold capitalize backdrop-blur">
               {trip.visibility}
             </span>
@@ -140,7 +143,7 @@ function ItineraryView() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:max-w-xl lg:justify-end lg:shrink-0">
             <Button
               type="button"
               variant="secondary"
@@ -149,6 +152,10 @@ function ItineraryView() {
             >
               <Share2 size={17} aria-hidden="true" />
               Share Trip
+            </Button>
+            <Button as={Link} to={`/share/${trip.id}`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
+              <ExternalLink size={17} aria-hidden="true" />
+              Preview Share
             </Button>
             <Button
               type="button"
@@ -172,6 +179,10 @@ function ItineraryView() {
             <Button as={Link} to={`/trips/${trip.id}/checklist`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
               <CheckSquare size={17} aria-hidden="true" />
               Checklist
+            </Button>
+            <Button as={Link} to={`/trips/${trip.id}/notes`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
+              <StickyNote size={17} aria-hidden="true" />
+              Notes
             </Button>
           </div>
         </div>

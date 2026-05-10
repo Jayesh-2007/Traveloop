@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Globe2, ImagePlus, LoaderCircle, LockKeyhole, PlaneTakeoff } from 'lucide-react';
+import { Globe2, ImagePlus, LoaderCircle, LockKeyhole, PlaneTakeoff, Sparkles } from 'lucide-react';
 import Button from '../components/shared/Button.jsx';
 import Card from '../components/shared/Card.jsx';
 import ErrorMessage from '../components/shared/ErrorMessage.jsx';
@@ -118,18 +118,18 @@ function CreateTrip() {
         coverImageName,
       });
 
-      console.log('Created mock trip:', trip);
-      toast.success('Trip created successfully.');
+      console.log('Created trip:', trip);
+      toast.success('Trip created. Opening itinerary.');
       setIsSubmitting(false);
-      navigate('/trips');
-    }, 1500);
+      navigate(`/trips/${trip.id}/view`);
+    }, 950);
   }
 
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-4 rounded-3xl border border-white/80 bg-white/80 p-5 shadow-sm shadow-slate-200/70 backdrop-blur sm:flex-row sm:items-end sm:justify-between sm:p-6">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
             New itinerary
@@ -141,6 +141,10 @@ function CreateTrip() {
             Add the core details now. You can build the itinerary, checklist, and notes after the
             trip is saved.
           </p>
+        </div>
+        <div className="flex w-full items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900 sm:w-auto">
+          <Sparkles size={18} className="shrink-0 text-emerald-700" aria-hidden="true" />
+          <span className="font-medium">Starter AI itinerary is generated automatically.</span>
         </div>
       </header>
 
@@ -174,7 +178,7 @@ function CreateTrip() {
                     disabled={isSubmitting}
                     aria-invalid={Boolean(errors.name)}
                     aria-describedby={errors.name ? 'name-error' : undefined}
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-700/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="traveloop-input mt-2"
                     required
                   />
                   {errors.name && (
@@ -202,7 +206,7 @@ function CreateTrip() {
                     rows={5}
                     placeholder="Add route ideas, travel style, must-see stops, or planning notes."
                     disabled={isSubmitting}
-                    className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-700/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="traveloop-input mt-2 resize-y"
                   />
                   <p className="mt-2 text-xs leading-5 text-slate-500">
                     Optional, but helpful when you revisit the trip later.
@@ -223,7 +227,7 @@ function CreateTrip() {
                       disabled={isSubmitting}
                       aria-invalid={Boolean(errors.startDate)}
                       aria-describedby={errors.startDate ? 'startDate-error' : undefined}
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-700/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                      className="traveloop-input mt-2"
                       required
                     />
                     {errors.startDate && (
@@ -247,7 +251,7 @@ function CreateTrip() {
                       disabled={isSubmitting}
                       aria-invalid={Boolean(errors.endDate)}
                       aria-describedby={errors.endDate ? 'endDate-error' : undefined}
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-700/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                      className="traveloop-input mt-2"
                       required
                     />
                     {errors.endDate && (
@@ -381,7 +385,7 @@ function CreateTrip() {
               ) : (
                 <>
                   <PlaneTakeoff size={17} aria-hidden="true" />
-                  Create Trip
+                  Create & Open Itinerary
                 </>
               )}
             </Button>

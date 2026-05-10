@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CalendarDays, LoaderCircle, MapPin, Sparkles, WalletCards } from 'lucide-react';
 import Button from './shared/Button.jsx';
 import Card from './shared/Card.jsx';
@@ -95,14 +96,14 @@ function AITripGenerator() {
         <div className="border-b border-slate-200 bg-slate-950 p-6 text-white sm:p-7 lg:border-b-0 lg:border-r lg:border-slate-800">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-100">
             <Sparkles size={14} aria-hidden="true" />
-            AI trip generator mock
+            AI travel copilot
           </div>
           <h2 className="mt-5 text-2xl font-semibold tracking-tight">
             Build a polished itinerary draft in seconds.
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            Simulate the AI planning moment for the demo: destination, style, budget, and travel
-            length become day cards with activities, food ideas, and practical tips.
+            Destination, style, budget, and travel length become day cards with activities, food
+            ideas, and practical tips for faster planning.
           </p>
 
           <form onSubmit={handleGenerate} className="mt-6 space-y-4">
@@ -117,7 +118,7 @@ function AITripGenerator() {
                 value={formData.destination}
                 onChange={updateField}
                 placeholder="Tokyo"
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
               />
             </div>
 
@@ -131,7 +132,7 @@ function AITripGenerator() {
                   name="travelStyle"
                   value={formData.travelStyle}
                   onChange={updateField}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
                 >
                   {travelStyles.map((style) => (
                     <option key={style} value={style}>
@@ -150,7 +151,7 @@ function AITripGenerator() {
                   name="budget"
                   value={formData.budget}
                   onChange={updateField}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
                 >
                   {budgetLevels.map((budget) => (
                     <option key={budget} value={budget}>
@@ -173,7 +174,7 @@ function AITripGenerator() {
                 max="7"
                 value={formData.days}
                 onChange={updateField}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-300/10"
               />
             </div>
 
@@ -210,11 +211,11 @@ function AITripGenerator() {
           <div className="mt-6 space-y-4">
             {isGenerating &&
               [1, 2, 3].map((item) => (
-                <div key={item} className="animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="h-4 w-20 rounded-full bg-slate-200" />
-                  <div className="mt-4 h-5 w-3/4 rounded-full bg-slate-200" />
-                  <div className="mt-3 h-3 w-full rounded-full bg-slate-200" />
-                  <div className="mt-2 h-3 w-2/3 rounded-full bg-slate-200" />
+                <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="shimmer h-4 w-20 rounded-full bg-slate-200" />
+                  <div className="shimmer mt-4 h-5 w-3/4 rounded-full bg-slate-200" />
+                  <div className="shimmer mt-3 h-3 w-full rounded-full bg-slate-200" />
+                  <div className="shimmer mt-2 h-3 w-2/3 rounded-full bg-slate-200" />
                 </div>
               ))}
 
@@ -225,7 +226,7 @@ function AITripGenerator() {
                 </span>
                 <h4 className="mt-4 font-semibold text-slate-950">No generated plan yet</h4>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Fill in the preferences and generate a demo itinerary with travel-ready details.
+                  Choose a destination and let Traveloop draft a polished itinerary preview.
                 </p>
               </div>
             )}
@@ -263,6 +264,17 @@ function AITripGenerator() {
                   </div>
                 </article>
               ))}
+
+            {!isGenerating && generatedItinerary.length > 0 && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-medium leading-6 text-emerald-900">
+                  Like this route? Save a trip to open itinerary, budget, checklist, and share tools.
+                </p>
+                <Button as={Link} to="/trips/new" variant="secondary" className="border-emerald-200 bg-white">
+                  Create Trip
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

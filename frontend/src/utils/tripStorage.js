@@ -151,7 +151,16 @@ export function getTrips() {
     const trips = Array.isArray(parsedTrips) ? parsedTrips : [];
 
     if (trips.length > 0) {
-      return trips;
+      const existingTripIds = new Set(trips.map((trip) => trip.id));
+      const missingDemoTrips = getDemoTrips().filter((trip) => !existingTripIds.has(trip.id));
+
+      if (missingDemoTrips.length > 0) {
+        const mergedTrips = [...trips, ...missingDemoTrips].filter((trip) => trip?.id);
+        saveTrips(mergedTrips);
+        return mergedTrips;
+      }
+
+      return trips.filter((trip) => trip?.id);
     }
 
     const seededTrips = getDemoTrips();

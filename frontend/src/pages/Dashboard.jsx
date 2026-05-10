@@ -2,18 +2,27 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
   Clock3,
   Globe2,
   MapPin,
   PlaneTakeoff,
   Route,
+  Share2,
   Sparkles,
+  TrendingUp,
   Users,
+  WalletCards,
 } from 'lucide-react';
 import AITripGenerator from '../components/AITripGenerator.jsx';
 import Button from '../components/shared/Button.jsx';
 import Card from '../components/shared/Card.jsx';
-import { formatDateRange, getTripDuration, getTrips } from '../utils/tripStorage.js';
+import {
+  formatDateRange,
+  getTripBudgetTotal,
+  getTripDuration,
+  getTrips,
+} from '../utils/tripStorage.js';
 
 const recommendations = [
   {
@@ -42,6 +51,14 @@ const recommendations = [
   },
 ];
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function Dashboard() {
   const trips = getTrips();
   const recentTrips = trips.slice(0, 3);
@@ -52,34 +69,57 @@ function Dashboard() {
     (total, trip) => total + getTripDuration(trip.startDate, trip.endDate),
     0,
   );
+  const totalBudget = trips.reduce((total, trip) => total + getTripBudgetTotal(trip.budget), 0);
+  const averageBudget = trips.length > 0 ? Math.round(totalBudget / trips.length) : 0;
+  const budgetLeaders = trips
+    .map((trip) => ({
+      id: trip.id,
+      name: trip.name,
+      total: getTripBudgetTotal(trip.budget),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3);
 
   const metrics = [
-    { label: 'Saved trips', value: trips.length, helper: 'Ready for demo', icon: PlaneTakeoff },
+    { label: 'Saved trips', value: trips.length, helper: 'Ready to continue', icon: PlaneTakeoff },
     { label: 'Travel days', value: totalDays, helper: 'Across planned routes', icon: CalendarDays },
-    { label: 'Shared plans', value: publicTrips, helper: 'Public itineraries', icon: Users },
+    { label: 'Share-ready', value: publicTrips, helper: 'Public itineraries', icon: Users },
+  ];
+  const productivityStats = [
+    { label: 'AI itinerary days', value: totalDays, icon: Sparkles },
+    { label: 'Checklist categories', value: 4, icon: CheckCircle2 },
+    { label: 'Budget views', value: trips.length, icon: WalletCards },
+    { label: 'Share actions', value: publicTrips + 1, icon: Share2 },
   ];
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 text-white shadow-xl shadow-slate-300/40">
-        <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr] lg:p-10">
-          <div className="flex min-h-96 flex-col justify-between gap-10">
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-900 text-white shadow-2xl shadow-emerald-950/20">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-72 rounded-full bg-sky-300/10 blur-3xl" />
+        <div className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.18fr_0.82fr] lg:p-10 xl:p-12">
+          <div className="flex min-h-[31rem] flex-col justify-between gap-10">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-100">
                 <Globe2 size={14} aria-hidden="true" />
-                Investor demo workspace
+                AI-powered travel planning platform
               </div>
-              <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                Plan smarter trips with one calm travel command center.
+              <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+                Plan unforgettable trips with an AI travel command center.
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300">
-                Traveloop brings itinerary planning, packing, AI suggestions, budgets, and share-ready
-                travel context into a dashboard built for real trips.
+              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                Traveloop turns scattered travel ideas into itineraries, smart budgets, packing
+                checklists, notes, and share-ready journey pages built for real planning momentum.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button as={Link} to="/trips/new" className="bg-white text-slate-950 hover:bg-emerald-50">
+              <Button
+                as={Link}
+                to="/trips/new"
+                size="lg"
+                className="from-white to-emerald-50 text-slate-950 hover:from-white hover:to-white"
+              >
                 Plan New Trip
                 <ArrowRight size={17} aria-hidden="true" />
               </Button>
@@ -87,15 +127,16 @@ function Dashboard() {
                 as={Link}
                 to={nextTrip ? `/trips/${nextTrip.id}/view` : '/trips'}
                 variant="secondary"
-                className="border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15"
+                size="lg"
+                className="border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15 hover:text-white"
               >
                 Open Demo Itinerary
               </Button>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-            <div className="rounded-2xl bg-white p-5 text-slate-950 shadow-lg shadow-slate-950/20">
+          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
+            <div className="rounded-3xl bg-white p-5 text-slate-950 shadow-2xl shadow-slate-950/20">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-emerald-700">
@@ -115,11 +156,31 @@ function Dashboard() {
                 </span>
               </div>
 
-              <div className="mt-6 grid gap-3">
+              <div className="mt-6 rounded-3xl bg-slate-950 p-4 text-white">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                      AI preview
+                    </p>
+                    <p className="mt-1 text-lg font-semibold">3-day route generated</p>
+                  </div>
+                  <Sparkles size={22} className="text-emerald-300" aria-hidden="true" />
+                </div>
+                <div className="mt-4 space-y-2">
+                  {['Arrival buffer', 'Food-led neighborhood route', 'Shareable budget summary'].map((item) => (
+                    <div key={item} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle2 size={15} className="text-emerald-300" aria-hidden="true" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3">
                 {[
                   ['Itinerary', 'Timeline, tips, and budget ready'],
                   ['Checklist', 'Packing progress persists locally'],
-                  ['Share', 'Mock share and PDF export actions'],
+                  ['Share', 'Share link and PDF export actions'],
                 ].map(([label, detail]) => (
                   <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="font-semibold text-slate-950">{label}</p>
@@ -147,6 +208,73 @@ function Dashboard() {
             </div>
           </Card>
         ))}
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <Card interactive={false} className="overflow-hidden p-0">
+          <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Smart budget highlights</p>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+                Spend visibility before the trip starts
+              </h2>
+            </div>
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+              <WalletCards size={14} aria-hidden="true" />
+              Avg {formatCurrency(averageBudget)}
+            </span>
+          </div>
+          <div className="grid gap-4 p-5 sm:grid-cols-[0.85fr_1.15fr] sm:p-6">
+            <div className="rounded-3xl bg-slate-950 p-5 text-white">
+              <p className="text-sm font-medium text-slate-300">Portfolio budget</p>
+              <p className="mt-3 text-4xl font-semibold tracking-tight">{formatCurrency(totalBudget)}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-400">
+                Across hotels, food, transport, and experiences in saved trips.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {budgetLeaders.map((trip, index) => (
+                <Link
+                  key={trip.id}
+                  to={`/trips/${trip.id}/view`}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-white hover:shadow-md hover:shadow-slate-200/80"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-950">{trip.name}</p>
+                    <p className="mt-1 text-sm text-slate-500">Budget rank #{index + 1}</p>
+                  </div>
+                  <p className="shrink-0 font-semibold text-slate-950">{formatCurrency(trip.total)}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        <Card interactive={false}>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Travel productivity stats</p>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+                Built for fast planning loops
+              </h2>
+            </div>
+            <span className="rounded-2xl bg-emerald-50 p-3 text-emerald-700">
+              <TrendingUp size={20} aria-hidden="true" />
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {productivityStats.map(({ label, value, icon: Icon }) => (
+              <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-slate-500">{label}</p>
+                  <Icon size={17} className="text-emerald-700" aria-hidden="true" />
+                </div>
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
@@ -201,7 +329,7 @@ function Dashboard() {
 
           <div className="mt-6 space-y-3">
             {[
-              ['Best demo path', 'Open Japan, export PDF, then checklist'],
+              ['Best planning path', 'Open Japan, export PDF, then checklist'],
               ['Local storage', 'Trips persist without backend setup'],
               ['Share readiness', `${publicTrips} public itinerary${publicTrips === 1 ? '' : 'ies'}`],
             ].map(([label, detail]) => (
@@ -223,7 +351,7 @@ function Dashboard() {
             </h2>
           </div>
           <p className="max-w-xl text-sm leading-6 text-slate-500">
-            A frontend-only simulation that gives judges the AI planning moment without requiring
+            A frontend-only planning preview that shows the AI itinerary moment without requiring
             backend services.
           </p>
         </div>

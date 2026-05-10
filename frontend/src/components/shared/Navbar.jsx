@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Bell, Compass, Search } from 'lucide-react';
+import { Bell, Compass, PlusCircle, Search, Sparkles } from 'lucide-react';
 
 function Navbar() {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-200/50 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-white/80 bg-white/85 shadow-sm shadow-slate-200/60 backdrop-blur-xl">
       <nav className="flex h-20 items-center justify-between gap-4 px-5 sm:px-7 lg:px-10">
         <Link to="/" className="flex min-w-0 items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-sm shadow-emerald-900/20">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-900/20">
             <Compass size={22} aria-hidden="true" />
           </span>
           <span className="min-w-0">
@@ -33,16 +33,30 @@ function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="hidden items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 lg:flex"
+          >
+            <Sparkles size={16} aria-hidden="true" />
+            AI Planner
+          </Link>
+          <Link
+            to="/trips/new"
+            className="hidden items-center gap-2 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:flex"
+          >
+            <PlusCircle size={16} aria-hidden="true" />
+            Plan Trip
+          </Link>
           <button
             type="button"
-            className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700 sm:flex"
+            className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-700 sm:flex"
             aria-label="Notifications"
           >
             <Bell size={18} aria-hidden="true" />
           </button>
           <Link
             to="/profile"
-            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 transition hover:border-slate-300 hover:shadow-sm"
+            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white">
               TR

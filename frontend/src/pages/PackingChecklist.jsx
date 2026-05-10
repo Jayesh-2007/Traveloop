@@ -99,7 +99,7 @@ function PackingChecklist() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70 sm:p-8">
+      <section className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-sm shadow-slate-200/70 backdrop-blur sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
@@ -112,9 +112,14 @@ function PackingChecklist() {
               {formatDateRange(trip.startDate, trip.endDate)}
             </p>
           </div>
-          <Button as={Link} to={`/trips/${trip.id}/view`} variant="secondary">
-            View Itinerary
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button as={Link} to={`/trips/${trip.id}/view`} variant="secondary">
+              View Itinerary
+            </Button>
+            <Button as={Link} to={`/trips/${trip.id}/notes`} variant="secondary">
+              Trip Notes
+            </Button>
+          </div>
         </div>
 
         <div className="mt-7">
@@ -135,6 +140,27 @@ function PackingChecklist() {
           </p>
         </div>
       </section>
+
+      {completion === 0 && (
+        <section className="rounded-3xl border border-dashed border-emerald-200 bg-emerald-50/70 p-5 shadow-sm shadow-emerald-100/60">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <span className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm shadow-emerald-100">
+                <Luggage size={22} aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="font-semibold text-slate-950">Start with essentials</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Check off your must-haves first so progress stays with the trip across sessions.
+                </p>
+              </div>
+            </div>
+            <Button as={Link} to={`/trips/${trip.id}/view`} variant="secondary" className="bg-white">
+              Review itinerary
+            </Button>
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-5 lg:grid-cols-2">
         {checklistTemplate.map(({ category, icon: Icon, items }) => (
