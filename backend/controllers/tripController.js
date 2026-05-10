@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getItineraryData } = require('./itineraryController');
 
 function toBooleanValue(value) {
   return value === true || value === 'true' || value === 1 || value === '1';
@@ -223,10 +224,48 @@ async function deleteTrip(req, res) {
   }
 }
 
+async function exportTrip(req, res) {
+  try {
+    const trip = await findTripByIdForUser(req.params.id, req.user.id);
+
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trip not found'
+      });
+    }
+
+    const itinerary = await getItineraryData({
+      id: trip.id,
+      name: trip.name,
+      description: trip.description,
+      start_date: trip.start_date,
+      end_date: trip.end_date,
+      is_public: trip.is_public
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Trip export fetched successfully',
+      data: {
+        export_version: '1.0',
+        generated_at: new Date().toISOString(),
+        itinerary
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while exporting trip'
+    });
+  }
+}
+
 module.exports = {
   createTrip,
   getTrips,
   getTripById,
   updateTrip,
-  deleteTrip
+  deleteTrip,
+  exportTrip
 };
