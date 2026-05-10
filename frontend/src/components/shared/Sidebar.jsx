@@ -8,18 +8,15 @@ import {
   Sparkles,
   StickyNote,
 } from 'lucide-react';
-import { getTrips } from '../../utils/tripStorage.js';
 
 function getNavigationLinks() {
-  const demoTrip = getTrips()[0];
-
   return [
     { to: '/', label: 'Dashboard', icon: Home, end: true },
     { to: '/trips', label: 'My Trips', icon: Luggage },
     { to: '/trips/new', label: 'Create Trip', icon: PlusCircle },
-    demoTrip && { to: `/trips/${demoTrip.id}/view`, label: 'Itinerary', icon: Map },
-    demoTrip && { to: `/trips/${demoTrip.id}/checklist`, label: 'Checklist', icon: CheckSquare },
-    demoTrip && { to: `/trips/${demoTrip.id}/notes`, label: 'Trip Notes', icon: StickyNote },
+    { to: '/trips', label: 'Itinerary', icon: Map },
+    { to: '/trips', label: 'Checklist', icon: CheckSquare },
+    { to: '/trips', label: 'Trip Notes', icon: StickyNote },
   ].filter(Boolean);
 }
 

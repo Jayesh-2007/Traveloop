@@ -1,24 +1,52 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, CheckSquare, Eye, Luggage, PlusCircle, Sparkles } from 'lucide-react';
+import { CalendarDays, CheckSquare, Eye, Luggage, Pencil, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Button from '../components/shared/Button.jsx';
 import Card from '../components/shared/Card.jsx';
 import EmptyState from '../components/shared/EmptyState.jsx';
+import ErrorMessage from '../components/shared/ErrorMessage.jsx';
 import { LoadingCards } from '../components/shared/LoadingSpinner.jsx';
-import { formatDateRange, getTrips } from '../utils/tripStorage.js';
+import { formatDateRange } from '../utils/tripStorage.js';
+import { deleteTrip, fetchTrips, getApiErrorMessage } from '../utils/tripApi.js';
 
 function MyTrips() {
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [trips, setTrips] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTrips(getTrips());
-      setIsLoading(false);
-    }, 280);
-
-    return () => clearTimeout(timer);
+    loadTrips();
   }, []);
+
+  async function loadTrips() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      setTrips(await fetchTrips());
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Unable to load trips.'));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleDeleteTrip(trip) {
+    const confirmed = window.confirm(`Delete "${trip.name}"? This cannot be undone.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteTrip(trip.id);
+      setTrips((currentTrips) => currentTrips.filter((item) => item.id !== trip.id));
+      toast.success('Trip deleted.');
+    } catch (requestError) {
+      toast.error(getApiErrorMessage(requestError, 'Unable to delete trip.'));
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -39,6 +67,8 @@ function MyTrips() {
           Create New Trip
         </Button>
       </header>
+
+      {error && <ErrorMessage message={error} />}
 
       {isLoading ? (
         <LoadingCards count={3} />
@@ -106,9 +136,17 @@ function MyTrips() {
                     <Eye size={16} aria-hidden="true" />
                     View Trip
                   </Button>
+                  <Button as={Link} to={`/trips/${trip.id}/edit`} variant="secondary">
+                    <Pencil size={16} aria-hidden="true" />
+                    Edit
+                  </Button>
                   <Button as={Link} to={`/trips/${trip.id}/checklist`} variant="secondary">
                     <CheckSquare size={16} aria-hidden="true" />
                     Checklist
+                  </Button>
+                  <Button type="button" variant="danger" onClick={() => handleDeleteTrip(trip)}>
+                    <Trash2 size={16} aria-hidden="true" />
+                    Delete
                   </Button>
                 </div>
               </div>

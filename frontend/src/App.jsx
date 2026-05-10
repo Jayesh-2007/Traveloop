@@ -28,6 +28,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/trips" element={<MyTrips />} />
               <Route path="/trips/new" element={<CreateTrip />} />
+              <Route path="/trips/:id/edit" element={<CreateTrip />} />
               <Route path="/trips/:id/view" element={<ItineraryView />} />
               <Route path="/trips/:id/checklist" element={<PackingChecklist />} />
               <Route path="/profile" element={<UserProfile />} />

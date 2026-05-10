@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -9,6 +9,7 @@ import {
   ExternalLink,
   LoaderCircle,
   MapPin,
+  Pencil,
   Share2,
   Sparkles,
   StickyNote,
@@ -17,12 +18,14 @@ import {
 import Button from '../components/shared/Button.jsx';
 import Card from '../components/shared/Card.jsx';
 import EmptyState from '../components/shared/EmptyState.jsx';
+import ErrorMessage from '../components/shared/ErrorMessage.jsx';
+import LoadingSpinner from '../components/shared/LoadingSpinner.jsx';
 import {
   formatDateRange,
   getTripBudgetTotal,
-  getTripById,
   getTripDuration,
 } from '../utils/tripStorage.js';
+import { fetchTrip, getApiErrorMessage } from '../utils/tripApi.js';
 
 const fallbackItinerary = [
   {
@@ -92,17 +95,61 @@ function getProgressWidthClass(value, total) {
 
 function ItineraryView() {
   const { id } = useParams();
-  const trip = getTripById(id);
+  const [trip, setTrip] = useState(null);
+  const [error, setError] = useState('');
+  const [isLoadingTrip, setIsLoadingTrip] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadTrip() {
+      setIsLoadingTrip(true);
+      setError('');
+
+      try {
+        const fetchedTrip = await fetchTrip(id);
+
+        if (isMounted) {
+          setTrip(fetchedTrip);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(getApiErrorMessage(requestError, 'Unable to load trip.'));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingTrip(false);
+        }
+      }
+    }
+
+    loadTrip();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (isLoadingTrip) {
+    return (
+      <div className="flex min-h-80 items-center justify-center">
+        <LoadingSpinner label="Loading itinerary" />
+      </div>
+    );
+  }
 
   if (!trip) {
     return (
-      <EmptyState
-        icon={MapPin}
-        title="Trip not found"
-        description="This itinerary may have been removed from local storage. Create a new trip to continue the planning flow."
-        action={{ label: 'Back to My Trips', to: '/trips' }}
-      />
+      <div className="space-y-4">
+        {error && <ErrorMessage message={error} />}
+        <EmptyState
+          icon={MapPin}
+          title="Trip not found"
+          description="This itinerary may have been removed or may not belong to your account."
+          action={{ label: 'Back to My Trips', to: '/trips' }}
+        />
+      </div>
     );
   }
 
@@ -156,6 +203,10 @@ function ItineraryView() {
             <Button as={Link} to={`/share/${trip.id}`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
               <ExternalLink size={17} aria-hidden="true" />
               Preview Share
+            </Button>
+            <Button as={Link} to={`/trips/${trip.id}/edit`} variant="secondary" className="border-white/20 bg-white/95 text-slate-900 hover:bg-white">
+              <Pencil size={17} aria-hidden="true" />
+              Edit Trip
             </Button>
             <Button
               type="button"

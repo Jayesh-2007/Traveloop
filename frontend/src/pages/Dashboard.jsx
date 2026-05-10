@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -17,12 +18,13 @@ import {
 import AITripGenerator from '../components/AITripGenerator.jsx';
 import Button from '../components/shared/Button.jsx';
 import Card from '../components/shared/Card.jsx';
+import ErrorMessage from '../components/shared/ErrorMessage.jsx';
 import {
   formatDateRange,
   getTripBudgetTotal,
   getTripDuration,
-  getTrips,
 } from '../utils/tripStorage.js';
+import { fetchTrips, getApiErrorMessage } from '../utils/tripApi.js';
 
 const recommendations = [
   {
@@ -60,7 +62,39 @@ function formatCurrency(value) {
 }
 
 function Dashboard() {
-  const trips = getTrips();
+  const [trips, setTrips] = useState([]);
+  const [error, setError] = useState('');
+  const [isLoadingTrips, setIsLoadingTrips] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadTrips() {
+      try {
+        const fetchedTrips = await fetchTrips();
+
+        if (isMounted) {
+          setTrips(fetchedTrips);
+          setError('');
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(getApiErrorMessage(requestError, 'Unable to load trips.'));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingTrips(false);
+        }
+      }
+    }
+
+    loadTrips();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const recentTrips = trips.slice(0, 3);
   const upcomingTrips = trips.slice(0, 2);
   const nextTrip = recentTrips[0];
@@ -94,6 +128,8 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {error && <ErrorMessage message={error} />}
+
       <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-900 text-white shadow-2xl shadow-emerald-950/20">
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-72 rounded-full bg-sky-300/10 blur-3xl" />
@@ -140,13 +176,15 @@ function Dashboard() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-emerald-700">
-                    {nextTrip ? 'Next adventure' : 'Start here'}
+                  {isLoadingTrips ? 'Loading trips' : nextTrip ? 'Next adventure' : 'Start here'}
                   </p>
                   <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                    {nextTrip?.name || 'Create your first trip'}
+                    {isLoadingTrips ? 'Checking your workspace' : nextTrip?.name || 'Create your first trip'}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {nextTrip
+                    {isLoadingTrips
+                      ? 'Fetching your saved trips from Traveloop API.'
+                      : nextTrip
                       ? formatDateRange(nextTrip.startDate, nextTrip.endDate)
                       : 'Your travel workflow begins with a trip card.'}
                   </p>
@@ -233,7 +271,7 @@ function Dashboard() {
               </p>
             </div>
             <div className="space-y-3">
-              {budgetLeaders.map((trip, index) => (
+              {budgetLeaders.length > 0 ? budgetLeaders.map((trip, index) => (
                 <Link
                   key={trip.id}
                   to={`/trips/${trip.id}/view`}
@@ -245,7 +283,11 @@ function Dashboard() {
                   </div>
                   <p className="shrink-0 font-semibold text-slate-950">{formatCurrency(trip.total)}</p>
                 </Link>
-              ))}
+              )) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-500">
+                  Create a trip to unlock budget highlights.
+                </div>
+              )}
             </div>
           </div>
         </Card>
@@ -290,7 +332,7 @@ function Dashboard() {
           </div>
 
           <div className="divide-y divide-slate-100">
-            {recentTrips.map((trip) => (
+            {recentTrips.length > 0 ? recentTrips.map((trip) => (
               <Link
                 key={trip.id}
                 to={`/trips/${trip.id}/view`}
@@ -312,7 +354,11 @@ function Dashboard() {
                   {formatDateRange(trip.startDate, trip.endDate)}
                 </div>
               </Link>
-            ))}
+            )) : (
+              <div className="px-5 py-5 text-sm font-medium text-slate-500 sm:px-6">
+                {isLoadingTrips ? 'Loading your trips...' : 'No trips yet. Create your first trip to start planning.'}
+              </div>
+            )}
           </div>
         </Card>
 
@@ -330,7 +376,7 @@ function Dashboard() {
           <div className="mt-6 space-y-3">
             {[
               ['Best planning path', 'Open Japan, export PDF, then checklist'],
-              ['Local storage', 'Trips persist without backend setup'],
+              ['Backend API', 'Trips persist in MySQL through authenticated requests'],
               ['Share readiness', `${publicTrips} public itinerary${publicTrips === 1 ? '' : 'ies'}`],
             ].map(([label, detail]) => (
               <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -371,7 +417,7 @@ function Dashboard() {
           </div>
 
           <div className="mt-6 space-y-3">
-            {upcomingTrips.map((trip) => (
+            {upcomingTrips.length > 0 ? upcomingTrips.map((trip) => (
               <Link
                 key={trip.id}
                 to={`/trips/${trip.id}/view`}
@@ -382,7 +428,11 @@ function Dashboard() {
                   {formatDateRange(trip.startDate, trip.endDate)}
                 </p>
               </Link>
-            ))}
+            )) : (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-500">
+                {isLoadingTrips ? 'Loading upcoming trips...' : 'No upcoming trips yet.'}
+              </div>
+            )}
           </div>
         </Card>
 

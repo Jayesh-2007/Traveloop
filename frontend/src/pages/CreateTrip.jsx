@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Globe2, ImagePlus, LoaderCircle, LockKeyhole, PlaneTakeoff, Sparkles } from 'lucide-react';
 import Button from '../components/shared/Button.jsx';
 import Card from '../components/shared/Card.jsx';
 import ErrorMessage from '../components/shared/ErrorMessage.jsx';
-import { createTrip } from '../utils/tripStorage.js';
+import LoadingSpinner from '../components/shared/LoadingSpinner.jsx';
+import { createTrip, fetchTrip, getApiErrorMessage, updateTrip } from '../utils/tripApi.js';
 
 const DESCRIPTION_MAX_LENGTH = 420;
 
@@ -19,11 +20,55 @@ const initialFormState = {
 
 function CreateTrip() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
+  const [loadError, setLoadError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [isLoadingTrip, setIsLoadingTrip] = useState(isEditMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImageName, setCoverImageName] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
+
+  useEffect(() => {
+    if (!isEditMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadTrip() {
+      try {
+        const trip = await fetchTrip(id);
+
+        if (isMounted) {
+          setFormData({
+            name: trip.name,
+            description: trip.description || '',
+            startDate: trip.startDate,
+            endDate: trip.endDate,
+            visibility: trip.visibility,
+          });
+          setLoadError('');
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setLoadError(getApiErrorMessage(requestError, 'Unable to load trip.'));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingTrip(false);
+        }
+      }
+    }
+
+    loadTrip();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isEditMode]);
 
   useEffect(() => {
     return () => {
@@ -99,8 +144,9 @@ function CreateTrip() {
     setCoverPreview(URL.createObjectURL(file));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
+    setSubmitError('');
 
     const validationErrors = validateForm();
     setErrors(validationErrors);
@@ -112,39 +158,53 @@ function CreateTrip() {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const trip = createTrip({
-        ...formData,
-        coverImageName,
-      });
+    try {
+      const trip = isEditMode
+        ? await updateTrip(id, formData)
+        : await createTrip({ ...formData, coverImageName });
 
-      console.log('Created trip:', trip);
-      toast.success('Trip created. Opening itinerary.');
+      toast.success(isEditMode ? 'Trip updated.' : 'Trip created. Opening itinerary.');
       setIsSubmitting(false);
       navigate(`/trips/${trip.id}/view`);
-    }, 950);
+    } catch (requestError) {
+      setSubmitError(getApiErrorMessage(requestError, isEditMode ? 'Unable to update trip.' : 'Unable to create trip.'));
+      setIsSubmitting(false);
+    }
   }
 
   const hasErrors = Object.keys(errors).length > 0;
 
+  if (isLoadingTrip) {
+    return (
+      <div className="flex min-h-80 items-center justify-center">
+        <LoadingSpinner label="Loading trip" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {loadError && <ErrorMessage message={loadError} />}
+
       <header className="flex flex-col gap-4 rounded-3xl border border-white/80 bg-white/80 p-5 shadow-sm shadow-slate-200/70 backdrop-blur sm:flex-row sm:items-end sm:justify-between sm:p-6">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            New itinerary
+            {isEditMode ? 'Edit itinerary' : 'New itinerary'}
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-            Create a trip
+            {isEditMode ? 'Update trip' : 'Create a trip'}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Add the core details now. You can build the itinerary, checklist, and notes after the
-            trip is saved.
+            {isEditMode
+              ? 'Update trip metadata while keeping itinerary, checklist, and notes attached.'
+              : 'Add the core details now. You can build the itinerary, checklist, and notes after the trip is saved.'}
           </p>
         </div>
         <div className="flex w-full items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900 sm:w-auto">
           <Sparkles size={18} className="shrink-0 text-emerald-700" aria-hidden="true" />
-          <span className="font-medium">Starter AI itinerary is generated automatically.</span>
+          <span className="font-medium">
+            {isEditMode ? 'Changes save directly to MySQL.' : 'Starter AI itinerary is generated automatically.'}
+          </span>
         </div>
       </header>
 
@@ -161,6 +221,7 @@ function CreateTrip() {
             {hasErrors && (
               <ErrorMessage message="Some details need attention before this trip can be created." />
             )}
+            {submitError && <ErrorMessage message={submitError} />}
 
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-6">
@@ -325,7 +386,7 @@ function CreateTrip() {
                 <div>
                   <p className="text-sm font-semibold text-slate-800">Cover image</p>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Upload UI only for now. A generated color cover will be saved with the trip.
+                    Upload UI only for now. Trip metadata saves to the backend.
                   </p>
                 </div>
 
@@ -380,12 +441,12 @@ function CreateTrip() {
               {isSubmitting ? (
                 <>
                   <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />
-                  Creating trip
+                  {isEditMode ? 'Saving trip' : 'Creating trip'}
                 </>
               ) : (
                 <>
                   <PlaneTakeoff size={17} aria-hidden="true" />
-                  Create & Open Itinerary
+                  {isEditMode ? 'Save & Open Itinerary' : 'Create & Open Itinerary'}
                 </>
               )}
             </Button>
