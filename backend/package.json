@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "db:reset": "node scripts/resetDatabase.js",
+    "db:reseed": "node scripts/reseedDatabase.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

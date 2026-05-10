@@ -18,7 +18,20 @@ const REQUIRED_ENV_KEYS = [
   'JWT_EXPIRES_IN'
 ];
 
+const SEEDED_TABLES = [
+  'budget_caps',
+  'notes',
+  'packing_items',
+  'stop_activities',
+  'activities',
+  'stops',
+  'trips',
+  'cities',
+  'users'
+];
+
 module.exports = {
   HTTP_STATUS,
-  REQUIRED_ENV_KEYS
+  REQUIRED_ENV_KEYS,
+  SEEDED_TABLES
 };
